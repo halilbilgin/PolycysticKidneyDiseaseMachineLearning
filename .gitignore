@@ -1,0 +1,6 @@
+.RData
+.Rhistory
+polikistikML.txt
+.Rproj.user/*
+results/*
+*.Rproj
