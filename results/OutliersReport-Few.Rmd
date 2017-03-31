@@ -1,0 +1,60 @@
+---
+title: "Outliers Report"
+author: "Halil Bilgin"
+date: "31 Mart 2017"
+output:
+  word_document: 
+    fig_height: 2
+    fig_width: 4
+  html_document:
+    fig_height: 2
+    fig_width: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+source('../autoload.R', chdir=T)
+library(xtable, verbose = F)
+library(pander)
+db <- manipulations$getProcessedData(read.table(file = "../polikistikML.txt", header = T), delOutliers=F)
+```
+
+## R Markdown
+
+In this report, outliers in the data will be presented. 
+
+```{r loading data, results='asis'}
+
+for(colNm in c('LDL','crp','kolesterol')) {
+  
+  x <- db[,colNm]
+  if(! is.numeric(x)){
+    next
+  }
+  
+  outliers <- boxplot.stats(x)$out
+  if(length(outliers) == 0){
+    next
+  }  
+  
+  pandoc.header(paste('Col name:', colNm), level = 2)
+  
+  
+  indices <- which(x %in% outliers)
+  pandoc.header('Box plot', level = 4)
+
+  print(bwplot(x))
+  cat('\n')
+  pandoc.header('Outliers', level = 4)
+
+  
+  dset1 <- db[indices, c('gozlemno', colNm)]
+  
+  print(knitr::kable(dset1,row.names=F), 'html', table.attr='class="flat-table"')
+ 
+}
+
+
+```
+
+
