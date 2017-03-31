@@ -1,6 +1,6 @@
 function(trData, fm, 
          tuneGrid = expand.grid(.mincriterion = 0.95, 
-                                            .maxdepth = as.integer(seq(5, 20, 2))),
+                                            .maxdepth = as.integer(seq(from=3, to=7, by=1))),
          controls = ctree_control(teststat = 'max', 
                                   minsplit=5), method='ctree2', ...) {
   fit1 <- train(fm, data = trData, 
