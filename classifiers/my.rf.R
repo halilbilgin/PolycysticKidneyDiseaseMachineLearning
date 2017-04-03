@@ -1,4 +1,4 @@
-function(trData, fm, method="rf", mtry = sqrt(ncol(trData) - 2), 
+function(trData, fm, method="rf", mtry = c(1,2,3,4), 
          tuneGrid = expand.grid(.mtry=mtry), ...) {
 
   fit <- train(fm, data=trData, method=method,  tuneGrid=tuneGrid, ...)
