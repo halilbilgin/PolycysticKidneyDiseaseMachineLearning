@@ -8,7 +8,7 @@ function(scopes, data) {
     MSEs <- NULL
     
     cv <- cv.glmnet(model.matrix(gfrloss2~., scaledDb)[,-1], scaledDb$gfrloss2, 
-                    family='binomial', alpha=1, nfolds=nrow(scaledDb))
+                    family='binomial', alpha=1, nfolds=5)
     
     coefs <- as.matrix(predict(cv, type='coefficients', s=cv$lambda.min))
     coefs <- coefs[coefs[,'1'] != 0,]
