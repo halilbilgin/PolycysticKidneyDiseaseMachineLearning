@@ -59,7 +59,7 @@ This report compares different algorithms and feature sets forPolycystic kidney 
 ```
 
 #### Fitting models..
-``` {r fitting models, include=FALSE}
+```{r fitting models, echo=F, include=FALSE}
   allFits <- list()
   
   ## creating a list that will contain fits
@@ -74,7 +74,7 @@ This report compares different algorithms and feature sets forPolycystic kidney 
       classifier <- algorithms[[i]]
       fit <- classifier(trData=scaledDb, fm=feature,
                         method=methodName, metric='Accuracy',
-                        trControl=control, tuneLength=20)
+                        trControl=control)
       
       fits <- append(fits, list(fit))
       }
