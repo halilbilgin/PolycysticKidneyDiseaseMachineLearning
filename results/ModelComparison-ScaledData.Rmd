@@ -2,7 +2,9 @@
 title: "ModelComparison-ScaledData"
 author: "Halil Bilgin"
 date: "31 Mart 2017"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -17,8 +19,8 @@ This report compares different algorithms and feature sets forPolycystic kidney 
 
 # Models to be compared
 ```{r algorithms}
-  algorithms <- c('knn', 'rf', 'svmRadial', 'glm', 'cforest', 'ctree')
-  print(algorithms)
+  algorithms <- c('svmRadial', 'lda', 'glm', 'nb', 'rf')
+  
   algorithms <- loadClassifiers(algorithms)
 ```
 
@@ -26,8 +28,12 @@ This report compares different algorithms and feature sets forPolycystic kidney 
 ```{r trainControl}
   
   cat('Constant Seed:', seed, '\n')
+  library(doMC)
+  registerDoMC(cores = 2)
   set.seed(seed)
-  control <- trainControl(method="repeatedcv", number=10, repeats=30, p=0.75)
+  
+  control <- trainControl(method="LOOCV", 
+                          allowParallel = T)
   
   cat('Method:', control$method, 'Number:', control$number, ' Repeats:',control$repeats, 'Training Percentage:', control$p)
   
@@ -40,20 +46,20 @@ This report compares different algorithms and feature sets forPolycystic kidney 
 
 ## Model comparisons with different sets of features
 
-```{r featureSelection, echo=F}
+```{r featureSelection, echo=F, include=FALSE}
   scopes <- c(featureSelection$fm(db,F), featureSelection$fm(db,T))
 
-  features <- featureSelection$aic(scopes, scaledDb)
+  features <- featureSelection$lasso(scopes[0:1], scaledDb)
+  features <- append(features, featureSelection$aic(scopes, scaledDb))
   
   ## Adding all features without selections.
   features <- append(features, list(as.factor(gfrloss2)~.))
-  names(features) <- c('AIC(ALL)', 'AIC(ALL+ALL^2)', 'ALL')
+  names(features) <- c('LASSO(ALL)', 'AIC(ALL)', 'AIC(ALL+ALL^2)', 'ALL')
 
-  
 ```
 
 #### Fitting models..
-``` {r fitting models}
+``` {r fitting models, include=FALSE}
   allFits <- list()
   
   ## creating a list that will contain fits
