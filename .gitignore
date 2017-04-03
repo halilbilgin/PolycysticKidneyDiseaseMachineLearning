@@ -2,6 +2,7 @@
 .Rhistory
 polikistikML.txt
 .Rproj.user/*
-
+results/*
 *.Rproj
 .Rproj.user
+!results/*.Rmd
