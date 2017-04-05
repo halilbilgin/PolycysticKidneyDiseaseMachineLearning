@@ -1,0 +1,145 @@
+---
+title: "SamplingMethods"
+author: "Halil Bilgin"
+date: "3 Nisan 2017"
+output:
+  word_document: 
+    fig_height: 4
+    fig_width: 6
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(pander)
+library(dplyr)
+library(tidyr)
+library(reshape2, quietly = T)
+library(plyr, quietly = T)
+library(scales, quietly = T)
+
+source('../autoload.R', chdir=T)
+algorithms <- c('lda', 'svmRadial', 'rda', 'glm')
+
+algorithms <- loadClassifiers(algorithms)
+cat('Constant Seed:', seed, '\n')
+library(doMC)
+registerDoMC(cores = 2)
+
+samplingMethods <- c( 'up', 'smote', 'rose', 'down', 'none')
+
+set.seed(seed)
+features <- featureSelection$aic(c(featureSelection$fm(db,F)), scaledDb)
+
+set.seed(seed)
+tt <- manipulations$trainTest(db, p=0.7)
+scaledTt <- manipulations$scaledTrainTest(tt$train, tt$test)
+print(tt$test)
+allModels <- list()
+allCmatrices <- list()
+```
+
+## Modeling the original unbalanced data
+
+In this report, undersampling, oversampling and rose methods will be used.
+
+Setup:
+0.7 - 0.3 scaled training-test split.
+For Training control, method is 10-fold repeatedCV repeated by 10 times. 
+
+Below, there are graphics for each learning algorithms that compares the performance of each sampling method using the learning algorithm.
+
+```{r trainingModels, echo=FALSE, include=FALSE}
+
+  set.seed(seed)
+  seeds <- vector(mode = "list", length = 101)
+  for(i in 1:101){
+    set.seed(seed+i)
+    seeds[[i]] <- sample.int(1000, 22)
+  }
+  for(i in 1:length(algorithms)) {
+    cmatrices <- list()
+    models <- lapply(samplingMethods, function(nm) {
+      
+     
+      control <- trainControl(method="repeatedcv", number = 10, repeats=10, 
+                    allowParallel = T,sampling=if(nm=='none') NULL else nm,
+                    seeds = seeds)
+     
+      model <- algorithms[[i]](scaledTt$train, features[[1]], trControl=control,
+                              method=names(algorithms)[i])
+      cmatrix <- confusionMatrix(predict(model, newdata=scaledTt$test),
+                                 scaledTt$test$gfrloss2)
+      cmatrices <- assign('cmatrices', append(get('cmatrices'), 
+                                              list(cmatrix)), env=.GlobalEnv)
+      
+      return(model)
+    })
+    
+    names(models) <- samplingMethods
+    names(cmatrices) <- names(models)
+    
+    allModels <- append(allModels, list(models))
+    allCmatrices <- append(allCmatrices, list(cmatrices))
+    
+  }
+
+  names(allModels) <- names(algorithms)
+  names(allCmatrices) <- names(algorithms)
+  
+```
+
+```{r graphs, echo=FALSE}
+  allKappaVals <- data.frame(samplingMethod=character(),
+                             learningMethod=character(),
+                             kappa=numeric())
+  for(i in 1:length(allModels)) {
+    algorithm <- names(allModels)[i]
+    print(algorithm)
+    
+    models <- allModels[[i]]
+    cmatrices <- allCmatrices[[i]]
+    
+    comparison <- data.frame()
+
+    for (name in names(models)) {
+      model <- cmatrices[[name]]
+      
+      comparison <- rbind(comparison, data.frame(
+        samplingMethod=name,
+        learningMethod=algorithm,
+        Accuracy=model$overall['Accuracy'],
+        Sensitivity=model$byClass['Sensitivity'],
+        Specificity=model$byClass['Specificity'],
+        F1=model$byClass['F1'],
+        Kappa=model$overall['Kappa']
+        
+      ))
+      
+    }
+    allKappaVals <- rbind(allKappaVals, comparison)
+    
+    print(comparison %>%
+      gather(x, y, Sensitivity:Kappa) %>%
+      ggplot(aes(x = x, y = y, color = samplingMethod)) +
+        geom_jitter(width = 0.2, alpha = 0.5, size = 3))
+  }
+
+```
+
+## Heatmap, comparing kappa values of each model and sampling method.
+Below, there is a heatmap that tries to summarize graphs above. Colors represents the kappa score of a specific learning-sampling method combination.
+
+```{r kappavals, echo=FALSE}
+  
+  kappa.m <- allKappaVals
+ ggplot(kappa.m, aes(samplingMethod, learningMethod)) +
+    geom_tile(aes(fill = Kappa)) + 
+    geom_text(aes(label = round(Kappa, 2))) +
+    scale_fill_gradient(low = "white", high = "steelblue") 
+  
+  
+  pandoc.header("Best kappa method", level=2)
+  print(knitr::kable(allKappaVals, row.names = F))
+  
+```
