@@ -19,7 +19,7 @@ library(plyr, quietly = T)
 library(scales, quietly = T)
 
 source('../autoload.R', chdir=T)
-algorithms <- c('lda', 'svmRadial', 'rda', 'glm')
+algorithms <- c('lda', 'svmRadial', 'glm', 'rf', 'nb')
 
 algorithms <- loadClassifiers(algorithms)
 cat('Constant Seed:', seed, '\n')
@@ -62,7 +62,7 @@ Below, there are graphics for each learning algorithms that compares the perform
     models <- lapply(samplingMethods, function(nm) {
       
      
-      control <- trainControl(method="repeatedcv", number = 10, repeats=10, 
+      control <- trainControl(method="repeatedcv", number = 10, repeats=3, 
                     allowParallel = T,sampling=if(nm=='none') NULL else nm,
                     seeds = seeds)
      
@@ -109,9 +109,9 @@ Below, there are graphics for each learning algorithms that compares the perform
         samplingMethod=name,
         learningMethod=algorithm,
         Accuracy=model$overall['Accuracy'],
+        AccuracyNull=confMatrix$overall['AccuracyNull'],
         Sensitivity=model$byClass['Sensitivity'],
         Specificity=model$byClass['Specificity'],
-        F1=model$byClass['F1'],
         Kappa=model$overall['Kappa']
         
       ))
