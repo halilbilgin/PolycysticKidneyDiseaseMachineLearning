@@ -46,7 +46,7 @@ loadClassifiers <- function(clNames) {
       
       fn <- function (trData, fm, method=clName, ...) {
      
-        return(train(fm, data=trData,method=method,...));
+        return(train(fm, data=trData, method=method,...));
       }
     } else {
       fn <- classifiers[[clName]]
@@ -60,11 +60,15 @@ loadClassifiers <- function(clNames) {
 
 remove(dirs, dirName, customLoader)
 
+## seed constant 
+seed <- 7
+
 ## Load the data if not loaded
 if(! exists('db'))
 {
-  db <- manipulations$getProcessedData(read.table(file = "polikistikML.txt", header = T))
+  dbRaw <- read.table(file = "polikistikML.txt", header = T)
+  db <- manipulations$getProcessedData(dbRaw)
+  dbNoNA <- manipulations$getProcessedData(dbRaw[!is.na(dbRaw$kreatinin), ])
   scaledDb <- manipulations$scaleDb(db)
+  scaledDbNoNA <- manipulations$scaleDb(dbNoNA)
 }
-## seed constant 
-seed <- 7
