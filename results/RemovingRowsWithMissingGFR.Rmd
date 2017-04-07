@@ -31,9 +31,6 @@ result <- data.frame(
 )
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
 
 ```{r trainingModels, include=FALSE}
 for(dbName in c('db', 'dbNoNA')) {
