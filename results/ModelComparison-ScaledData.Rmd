@@ -32,7 +32,7 @@ This report compares different algorithms and feature sets forPolycystic kidney 
   registerDoMC(cores = 2)
   set.seed(seed)
   
-  control <- trainControl(method="repeatedcv", number = 5, repeats=10, 
+  control <- trainControl(method="repeatedcv", number = 10, repeats=3, 
                           allowParallel = T)
   
   cat('Method:', control$method, 'Number:', control$number, ' Repeats:',control$repeats, 'Training Percentage:', control$p)
