@@ -5,7 +5,7 @@ function(trData, tData) {
   
   for(feature in colnames(trData)) {
     x <- trData[, feature]
-    if(is.numeric(x) && ! (feature %in% c('ht', 'cinsiyet')) ){
+    if(is.numeric(x) && ! (feature %in% c('ht', 'cinsiyet', 'yas40')) ){
       newRow <- c(sd(x), mean(x))
       
       scaledtrain[, feature] <- (trData[, feature] - newRow[2]) / newRow[1]
