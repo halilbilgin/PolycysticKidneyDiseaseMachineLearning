@@ -1,0 +1,60 @@
+---
+title: "CVFeatureSelection"
+author: "Halil Bilgin"
+date: "9 Nisan 2017"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(pander)
+library(pROC)
+
+source('../autoload.R', chdir=T)
+library(doMC)
+registerDoMC(cores = 2)
+repetitions <- 50
+```
+
+## Feature selection with CV
+
+In this report, ```r repetitions``` training-test split will be used. Stepwise AIC feature selection method will be applied to each training set. And their performance will be evaluated by AUROC measure of test splits.  
+
+
+```{r pressure, echo=FALSE}
+result <- data.frame(
+  method=character(),
+  AUC=numeric()
+)
+algorithms <- loadClassifiers(c('lda'))
+
+sapply(names(algorithms), function(algorithm) {
+    classifier <- get('algorithms')[[algorithm]]
+    for(i in 1:repetitions) {
+      set.seed(seed+i*100+1000)
+      tt <- manipulations$trainTest(get('db'), p=0.75)
+      scaledTt <- manipulations$scaledTrainTest(tt$train, tt$test)
+      features <- featureSelection$aic(c(featureSelection$fm(db)), scaledTt$train)
+
+      control <- trainControl(method="none",
+                              allowParallel = T)
+      
+      fit <- classifier(scaledTt$train, features[[1]], method=algorithm,
+                        trControl=control)
+      
+      predictions <- predict(fit, newdata=scaledTt$test, type='prob')
+      predictions <- predictions$az
+      
+      assign("result", rbind(get('result'), data.frame(
+        method=paste(format(features), collapse=''),
+        AUC=roc(scaledTt$test$gfrloss2, predictions)$auc[[1]]
+      )), envir = .GlobalEnv)
+      
+    }
+})
+result
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

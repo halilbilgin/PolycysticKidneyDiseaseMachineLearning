@@ -1,25 +1,35 @@
 ---
-title: "Does Removing rows with Missing GFR increases performance?"
+title: "LongerIntervals"
 author: "Halil Bilgin"
-date: "7 Nisan 2017"
-output:
-  word_document: default
-  html_document: default
+date: "9 Nisan 2017"
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 library(pander)
+
 source('../autoload.R', chdir=T)
+library(doMC)
+registerDoMC(cores = 4)
+
+repetitions <- 50
+
+db36 <- manipulations$getProcessedData(dbRaw[dbRaw$diyaliz_sure >= 36,])
+db48 <- manipulations$getProcessedData(dbRaw[dbRaw$diyaliz_sure >= 48,])
+
+
 ```
 
-## Does Removing rows with Missing GFR increases performance? 
 
-10 Different training-test split was used to measure performance. Table below represents confidence intervals of the different scores.
 
-```{r mainSetup}
-algorithms <- loadClassifiers(c('lda', 'nb', 'glm', 'svmRadial'))
-features <- featureSelection$aic(c(featureSelection$fm(db,F)), scaledDbNoNA)
+```{r cars}
+algorithms <- loadClassifiers(c('lda'))
+allFeatures <- featureSelection$fm(db,F)
+
+
+fm <- featureSelection$aic(c(allFeatures), scaledDb)
+
 
 result <- data.frame(
   method=character(),
@@ -29,21 +39,25 @@ result <- data.frame(
   Specificity=numeric(),
   Kappa=numeric()
 )
+
 ```
 
+## Including Plots
 
-```{r trainingModels, include=FALSE}
-for(dbName in c('db', 'dbNoNA')) {
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+sapply(c('db'), function(dbName) {
+  
   sapply(names(algorithms), function(algorithm) {
     classifier <- get('algorithms')[[algorithm]]
-    features <- get('features')
-    for(i in 1:10) {
+    features <- get('fm')
+    for(i in 1:repetitions) {
       set.seed(seed+i+1000)
       tt <- manipulations$trainTest(get(get('dbName')), p=0.75)
       scaledTt <- manipulations$scaledTrainTest(tt$train, tt$test)
       
-      control <- trainControl(method="repeatedcv", number = 10, repeats=3, 
-                              allowParallel = T)
+      control <- trainControl(method="none", allowParallel = T)
       
       fit <- classifier(scaledTt$train, features[[1]], method=algorithm,
                         trControl=control)
@@ -51,7 +65,7 @@ for(dbName in c('db', 'dbNoNA')) {
                                     scaledTt$test$gfrloss2)
       
       assign("result", rbind(get('result'), data.frame(
-        method=paste(algorithm, dbName),
+        method=paste(algorithm, get('dbName')),
         Accuracy=confMatrix$overall['Accuracy'],
         AccuracyNull=confMatrix$overall['AccuracyNull'],
         Sensitivity=confMatrix$byClass['Sensitivity'],
@@ -60,11 +74,14 @@ for(dbName in c('db', 'dbNoNA')) {
       )), envir = .GlobalEnv)
       
     }
+  })
 })
-}
+
+
 ```
 
-```{r printingTables}
+```{r results}
+
 result2 <- result[0, ]
 
 c<-sapply(levels(result$method), function(method) {
@@ -86,6 +103,8 @@ c<-sapply(levels(result$method), function(method) {
   assign('result2', rbind(get('result2'), x), envir = .GlobalEnv)
 
 })
-
+cat(paste('## Running lda and glm ',repetitions,' times.'))
 knitr::kable(result2, row.names = F)
 ```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

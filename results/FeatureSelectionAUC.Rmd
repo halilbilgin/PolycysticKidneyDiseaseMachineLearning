@@ -1,0 +1,136 @@
+---
+title: "FeatureSelectionAUC"
+author: "Halil Bilgin"
+date: "8 Nisan 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(pander)
+source('../autoload.R', chdir=T)
+library(doMC)
+registerDoMC(cores = 2)
+
+
+```
+
+## R Markdown
+
+
+```{r fittingmodels}
+library(pROC)
+aucResults <- data.frame(feature=character(), AUC=numeric())
+
+for(i in 1:10) {
+  set.seed(seed+i+1000)
+  tt <- manipulations$trainTest(dbNoNA, p=0.75)
+  scaledTt <- manipulations$scaledTrainTest(tt$train, tt$test)
+  for(colName in colnames(dbNoNA[, -which(names(db) =='gfrloss2')])) {
+   
+    
+    fit <- glm(as.formula(paste('gfrloss2 ~ ', colName)), 
+               family=binomial, data=scaledTt$train)
+    predictions <- predict(fit, newdata=scaledTt$test, type='response')
+    aucResults <- rbind(aucResults, data.frame(feature=colName, 
+                     AUC=roc(scaledTt$test$gfrloss2, predictions)$auc[[1]]))  
+  }
+}
+
+ordAUCResults <- aucResults[0, ]
+
+c<-sapply(levels(aucResults$feature), function(method) {
+  result <- get('aucResults')
+  x<- lapply(result[result$feature == method,], function(x){
+    if(! is.numeric(x)) {
+      return(x[[1]])
+    }
+    tTest <- t.test(x)
+    sMean <- round(tTest$estimate[[1]],3)
+    sError <- round(tTest$estimate[[1]] - tTest$conf.int[1], 3)
+    
+    #Lower bound of Wilson score confidence interval for
+    c(sMean - sError)
+    
+  })
+  
+  levels(x$method) <- levels(result$method)
+  x <- data.frame(x, stringsAsFactors=FALSE)
+  assign('ordAUCResults', rbind(get('ordAUCResults'), x), envir = .GlobalEnv)
+
+})
+
+ordAUCResults <- ordAUCResults[order(- ordAUCResults$AUC), ]
+
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r forwardedd, echo=FALSE}
+result <- data.frame(
+  method=character(),
+  Accuracy=numeric(),
+  AccuracyNull=numeric(),
+  Sensitivity=numeric(),
+  Specificity=numeric(),
+  Kappa=numeric()
+)  
+  algorithms <- loadClassifiers(c('lda'))
+
+  for(j in 1:nrow(ordAUCResults)) {
+    features <- as.formula(paste('gfrloss2 ~ ', 
+                    paste(ordAUCResults$feature[1:j], collapse='+')))
+    
+    for(i in 1:10) {
+      set.seed(seed+i+30)
+      tt <- manipulations$trainTest(dbNoNA, p=0.75)
+      scaledTt <- manipulations$scaledTrainTest(tt$train, tt$test)
+      fit <- algorithms$lda(scaledTt$train, features)
+      predictions <- predict(fit, newdata=scaledTt$test)
+      
+      confMatrix <- confusionMatrix(predictions,
+                                    scaledTt$test$gfrloss2)
+      
+      assign("result", rbind(get('result'), data.frame(
+        method=paste(ordAUCResults$feature[1:j], collapse='+'),
+        Accuracy=confMatrix$overall['Accuracy'],
+        AccuracyNull=confMatrix$overall['AccuracyNull'],
+        Sensitivity=confMatrix$byClass['Sensitivity'],
+        Specificity=confMatrix$byClass['Specificity'],
+        Kappa=confMatrix$overall['Kappa']
+      )), envir = .GlobalEnv)
+    }
+    
+  }
+
+
+```
+
+```{r grouping}
+result2 <- result[0, ]
+
+c<-sapply(levels(result$method), function(method) {
+  result <- get('result')
+  x<- lapply(result[result$method == method,], function(x){
+    if(! is.numeric(x)) {
+      return(x[[1]])
+    }
+    tTest <- t.test(x)
+    sMean <- round(tTest$estimate[[1]],3)
+    sError <- round(tTest$estimate[[1]] - tTest$conf.int[1], 3)
+    
+    c(sMean - sError)
+    
+  })
+  
+  levels(x$method) <- levels(result$method)
+  x <- data.frame(x, stringsAsFactors=FALSE)
+  assign('result2', rbind(get('result2'), x), envir = .GlobalEnv)
+
+})
+result2
+```
