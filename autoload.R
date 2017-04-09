@@ -67,8 +67,8 @@ seed <- 7
 if(! exists('db'))
 {
   dbRaw <- read.table(file = "polikistikML.txt", header = T)
-  db <- manipulations$getProcessedData(dbRaw)
-  dbNoNA <- manipulations$getProcessedData(dbRaw[!is.na(dbRaw$kreatinin), ])
+
+  db <- manipulations$getProcessedData(dbRaw[!is.na(dbRaw$kreatinin), ])
   scaledDb <- manipulations$scaleDb(db)
-  scaledDbNoNA <- manipulations$scaleDb(dbNoNA)
-}
+
+  }
