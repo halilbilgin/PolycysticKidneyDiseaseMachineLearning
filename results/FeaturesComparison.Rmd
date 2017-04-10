@@ -23,27 +23,33 @@ repetitions <- 50
 ```r repetitions``` Different training-test split was used to measure performance. Table below represents confidence intervals of the different scores.
 
 ```{r mainSetup}
-algorithms <- loadClassifiers(c('glm', 'lda'))
+#bayesglm
+
+algorithms <- loadClassifiers(c('lda'))
+
 nonLinearFormula <- featureSelection$aic(c(featureSelection$fm(db,T)), scaledDb)
+
+
 
 formulas <- c(
   featureSelection$aic(c(
-        featureSelection$fm(db,F),
         # Change + with * to get all interaction terms
+       
         as.formula(
-          gsub('\\+', '*', format(paste(nonLinearFormula, collapse='')))
+          gsub('\\+', '*', paste(nonLinearFormula, collapse=''))
         )    
                     ),
         starting = 'as.factor(gfrloss2) ~ 1',
-        scaledDb, steps=100),
-  nonLinearFormula
-  
+        scaledDb, steps=100)
+  #nonLinearFormula2
   )
+
 
 
 print(lapply(formulas, function(fm) {
   paste(format(fm), collapse='')
 }))
+
 
 names(formulas) <- 1:length(formulas)
 
@@ -73,7 +79,7 @@ sapply(names(formulas), function(fmNo) {
       tt <- manipulations$trainTest(get('db'), p=0.75)
       scaledTt <- manipulations$scaledTrainTest(tt$train, tt$test)
       
-      control <- trainControl(method="none",
+      control <- trainControl(method="repeatedcv", number=10, repeats=3,
                               allowParallel = T)
       
       fit <- classifier(scaledTt$train, features[[1]], method=algorithm,
